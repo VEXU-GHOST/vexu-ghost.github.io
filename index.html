@@ -520,16 +520,17 @@
     .brand .lockup { height: 36px; }
     .search { flex: 1; min-width: 0; height: 42px; margin: 0 12px; border-radius: 8px; font-size: 13px; }
     .hero { padding-top: 0; }
-    .hero-marks { top: 16px; right: 16px; gap: 16px; }
-    .hero-brand { top: 16px; left: 16px; gap: 10px; }
+    .hero-marks { top: 14px; right: 14px; gap: 10px; }
+    .hero-brand { top: 14px; left: 14px; gap: 6px; }
     .hero-media.intro .hero-brand {
       transform: translate(-50%, -50%) scale(1.9);
     }
-    .hero-ghost { height: 28px; }
-    .hero-word { font-size: 31px; }
+    .hero-ghost { height: 15px; }
+    .hero-word { font-size: 16px; }
+    .hero-tag { font-size: 6px; }
     .stage-cards { left: 6%; right: 6%; width: auto; }
-    .hero-marks img { height: 26px; }
-    .hero-marks img.vex { height: 23px; }
+    .hero-marks img { height: 13px; }
+    .hero-marks img.vex { height: 11px; }
     section { padding: 80px 0 0; }
     section#nominees { padding-top: 30px; }
     #nominees .grid-2 { margin-top: 40px; }
@@ -1071,8 +1072,19 @@
     const start = docTop(zone) - 10;
     return Math.min(1, Math.max(0, (window.scrollY - start) / captive));
   }
+  let compS = 1; // composition scale vs the 1440x900 reference design
   function resize() {
     dprCap = Math.min(window.devicePixelRatio || 1, 1.5);
+    const cw = media.clientWidth, chh = media.clientHeight;
+    const S = Math.min(Math.max(Math.min(cw / 1440, chh / 900), 0.55), 1.15);
+    if (Math.abs(S - compS) > 0.01) {
+      compS = S;
+      // text scales font AND width together -> identical line wrapping
+      copyEl.style.fontSize = (21 * S) + 'px';
+      copyEl.style.width = Math.round(520 * S) + 'px';
+      copyEl.style.maxWidth = '86%';
+      buildLines();
+    }
     const W = Math.round(media.clientWidth * dprCap), H = Math.round(media.clientHeight * dprCap);
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
     if (canvasTop.width !== W || canvasTop.height !== H) { canvasTop.width = W; canvasTop.height = H; }
@@ -1246,7 +1258,7 @@
     const gx = -0.4 * (VIEW_HALF * aspect) * act;
     const rotY = -0.6 + act * Math.PI * 2;
     // shrink on portrait/narrow screens so the robot doesn't fill the frame
-    const mob = aspect < 1 ? 0.55 + 0.35 * aspect : 1;
+    const mob = aspect < 1 ? 0.28 + 0.18 * aspect : 1; // ~50% of former mobile size
     const scaleRel = (0.8 + 0.4 * act) * mob / FRAME_SCALE;
     ctx2d.setTransform(dprCap, 0, 0, dprCap, 0, 0);
     ctx2d.clearRect(0, 0, wPx, hPx);
@@ -1254,8 +1266,9 @@
       const TWO_PI = Math.PI * 2;
       const idx = ((Math.round(rotY / TWO_PI * N_FRAMES) % N_FRAMES) + N_FRAMES) % N_FRAMES;
       const s = (hPx / 2) / VIEW_HALF;            // px per world unit
-      const size = hPx * scaleRel;                // frames span the full frustum height
-      const cx = wPx / 2 + gx * s, cy = hPx / 2 - gy * s;
+      const kC = compS / (hPx / 900);             // composition scale vs pure height scaling
+      const size = hPx * scaleRel * kC;
+      const cx = wPx / 2 + gx * s * kC, cy = hPx / 2 - gy * s * kC;
       const img = frames[idx];
       if (img.complete) ctx2d.drawImage(img, cx - size / 2, cy - size / 2, size, size);
     }
