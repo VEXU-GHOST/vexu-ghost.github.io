@@ -735,6 +735,7 @@
     uniform float grid;  // dither cell size (device px)
     uniform float opacity;
     uniform float boost;
+    uniform float cap; // max dot density: chunkier on phones, airier on desktop
     uniform vec4 rA;      // brand ellipse: cx, cy, rx, ry (device px, top-origin)
     uniform vec4 rB;      // partner marks ellipse
     uniform vec4 rD;      // stage-copy paragraph ellipse
@@ -794,7 +795,7 @@
       lum = min(1.0, lum * boost); // portrait density compensation
       // posterize to a few density levels so gradients render as clean
       // stepped dither bands instead of smearing continuously
-      return floor(lum * 5.0 + 0.5) / 5.0 * 0.8; // chunky: bright regions merge
+      return floor(lum * 5.0 + 0.5) / 5.0 * cap;
     }
     // dither dot mask at an arbitrary (possibly shifted) screen position
     float dotMask(vec2 fc, float zf) {
@@ -927,6 +928,7 @@
     gl.uniform1f(uGrid, Math.max(2, Math.round(cssCell * (dbw / Math.max(1, media.clientWidth)))));
     gl.uniform1f(gl.getUniformLocation(prog, 'boost'), portrait ? 1.3 : 1.0);
     gl.uniform1f(uOpacity, portrait ? 0.8 : 0.6); // stronger dots on phones
+    gl.uniform1f(gl.getUniformLocation(prog, 'cap'), media.clientWidth < 700 ? 0.7 : 0.32);
   }
 
   const tryPlay = () => video.play().then(() => videoUp()).catch(() => {});
