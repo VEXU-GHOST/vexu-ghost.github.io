@@ -189,50 +189,32 @@
   /* the last line of each paragraph sits naturally — no stub stretching */
   .stage-copy p .line:last-child { text-align-last: left; }
   /* stage-3 card rail: awwwards-style tiles, internally scrollable */
-  .stage-cards {
-    position: absolute; top: 0; bottom: 0; right: 16%;
-    padding: 128px 0 calc(128px + env(safe-area-inset-bottom, 0px));
-    width: min(500px, 46%); z-index: 6; /* above robot, below blur */
-    display: flex; flex-direction: column; gap: 26px;
-    overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
-    scrollbar-width: none;
-    opacity: 0; pointer-events: none;
-    will-change: opacity, transform;
+  /* stage 3: a browser-tab-style Notion panel pulls up in the middle */
+  .stage-notion {
+    position: absolute; left: 50%; top: 100px; bottom: 26px;
+    width: min(900px, 90%); z-index: 6;
+    display: flex; flex-direction: column;
+    border-radius: 12px; overflow: hidden;
+    background: #191919;
+    box-shadow: 0 24px 70px rgba(10, 2, 30, 0.55);
+    transform: translate(-50%, 120%);
+    pointer-events: none;
+    will-change: transform;
   }
-  .stage-cards::-webkit-scrollbar { display: none; }
-  .s-card {
-    flex: 0 0 auto;
-    /* dock-style panel: photo inside, lip below for the meta row */
-    background: #3e3e3e;
-    border: 1px solid #4e4e4e;
-    border-radius: 6px;
-    padding: 10px 10px 0;
+  .notion-bar {
+    display: flex; align-items: center; gap: 7px;
+    height: 42px; padding: 0 14px; flex: none;
+    background: #2a2a2a; color: #cfcfcf;
+    font-family: "Inter", sans-serif; font-size: 12.5px; font-weight: 600;
   }
-  .s-card .shot {
-    display: block; width: 100%;
-    aspect-ratio: 16 / 9; object-fit: cover; border-radius: 3px;
-    background: linear-gradient(150deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05));
+  .nb-dot { width: 10px; height: 10px; border-radius: 50%; background: #4c4c4c; }
+  .nb-title { margin-left: 10px; letter-spacing: 0.03em; }
+  .nb-close {
+    margin-left: auto; border: 0; background: none; color: #cfcfcf;
+    font-size: 22px; line-height: 1; cursor: pointer; padding: 2px 6px;
   }
-  .s-card .meta {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 6px 14px; /* the lip below the photo */
-    font-family: "Inter", sans-serif; color: #e4e4e4;
-  }
-  .s-card .meta .date {
-    margin-left: auto; font-size: 18px; font-weight: 700; color: #e4e4e4;
-  }
-  .s-card .meta h3 { font-size: 18px; font-weight: 700; }
-  .s-card .meta .by { font-size: 11px; color: rgba(255, 255, 255, 0.55); }
-  .s-card .avatar-sm {
-    width: 24px; height: 24px; border-radius: 50%; flex: none;
-    background: rgba(255, 255, 255, 0.25);
-    display: grid; place-items: center; font-size: 8px; font-weight: 700;
-  }
-  .s-card .name {
-    font-size: 13px; font-weight: 600;
-    text-decoration: underline; text-underline-offset: 3px;
-    text-decoration-color: rgba(255, 255, 255, 0.5);
-  }
+  .nb-close:hover { color: #fff; }
+  .notion-frame { flex: 1; border: 0; width: 100%; background: #fff; }
   .dither-canvas {
     position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
     opacity: 0; transition: opacity 1.4s ease;
@@ -531,7 +513,7 @@
     .hero-media:not(.intro) .hero-brand {
       transform: translate(-37.5%, -37.5%) scale(0.25);
     }
-    .stage-cards { left: 6%; right: 6%; width: auto; }
+    .stage-notion { width: 94%; top: 80px; bottom: 16px; }
     .stage-copy { width: 88%; font-size: 25px; }
     .hero-marks img { height: 22px; }
     .hero-marks img.vex { height: 19px; }
@@ -614,27 +596,13 @@
         <div class="stage-copy">
           <p>We are an open, competitive VEXU team featuring a fun, open environment where team members are able to learn and compete in VEXU!</p>
           <p>We don&rsquo;t just do well in competing, we&rsquo;re also pushing the boundary of VEXU and robotics, whether that be mechanical development in swerve or our advanced lidar stack. We compete in two competitions: VEXU and VEX AI.</p>        </div>
-        <div class="stage-cards">
-          <article class="s-card">
-            <img class="shot" src="assets/cards/worlds-excellence.webp" alt="" loading="lazy">
-            <div class="meta"><h3>Excellence Award &middot; VEX AI Worlds 2024</h3><span class="date">05/2024</span></div>
-          </article>
-          <article class="s-card">
-            <img class="shot" src="assets/cards/worlds-team.webp" alt="" loading="lazy">
-            <div class="meta"><h3>VEX World Championship</h3><span class="date">05/2025</span></div>
-          </article>
-          <article class="s-card">
-            <img class="shot" src="assets/cards/trophies.webp" alt="" loading="lazy">
-            <div class="meta"><h3>Tournament Trophies</h3><span class="date">03/2025</span></div>
-          </article>
-          <article class="s-card">
-            <img class="shot" src="assets/cards/high-stakes-field.webp" alt="" loading="lazy">
-            <div class="meta"><h3>High Stakes on the Field</h3><span class="date">06/2025</span></div>
-          </article>
-          <article class="s-card">
-            <img class="shot" src="assets/cards/robot-closeup.webp" alt="" loading="lazy">
-            <div class="meta"><h3>Omega Jerry, Up Close</h3><span class="date">02/2025</span></div>
-          </article>
+        <div class="stage-notion">
+          <div class="notion-bar">
+            <span class="nb-dot"></span><span class="nb-dot"></span><span class="nb-dot"></span>
+            <span class="nb-title">GHOST &mdash; Notion</span>
+            <button class="nb-close" aria-label="Back">&times;</button>
+          </div>
+          <iframe class="notion-frame" title="GHOST Notion"></iframe>
         </div>
         <div class="hero-shot ph hero-ph"></div>
         <canvas class="dither-canvas"></canvas>
@@ -992,7 +960,13 @@
   // paraOf remembers which paragraph each line belongs to — the two
   // paragraphs weave from opposite sides, like the demo's groups
   const copyEl = document.querySelector('.stage-copy');
-  const cardsEl = document.querySelector('.stage-cards');
+  const notionEl = document.querySelector('.stage-notion');
+  const notionFrame = document.querySelector('.notion-frame');
+  const NOTION_URL = 'https://ghost-vexu.notion.site/ebd/1a496ffbd3f580f1bf06e847f3403df4';
+  const nbClose = document.querySelector('.nb-close');
+  if (nbClose) nbClose.addEventListener('click', () => {
+    if (!gliding && curIdx === STAGES.length - 1) glideTo(STAGES.length - 2, performance.now());
+  });
   const stageLines = [], paraOf = [];
   const stageParas = Array.from(document.querySelectorAll('.stage-copy p'));
   const paraTexts = stageParas.map(p => p.textContent);
@@ -1218,19 +1192,6 @@
     if (gliding) return; // mid-transition: swallow everything
     const scale = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 :
                   e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerHeight : 1;
-    // last stage: wheel drives the card rail until its ends are reached
-    if (curIdx === STAGES.length - 1 && cardsEl && cardsEl.style.pointerEvents === 'auto') {
-      const atTop = cardsEl.scrollTop <= 0;
-      const atBottom = cardsEl.scrollTop >= cardsEl.scrollHeight - cardsEl.clientHeight - 1;
-      if ((dir > 0 && !atBottom) || (dir < 0 && !atTop)) {
-        cardsEl.scrollTop += e.deltaY * scale;
-        // swallow this gesture's momentum so hitting an end doesn't
-        // immediately page away
-        coolUntil = e.timeStamp + 400;
-        postGlide = true;
-        return;
-      }
-    }
     if (!freshGesture(e, scale)) return;
     const next = Math.min(STAGES.length - 1, Math.max(0, curIdx + dir));
     if (next !== curIdx) glideTo(next, e.timeStamp);
@@ -1283,17 +1244,11 @@
   window.addEventListener('touchstart', e => {
     swipeY = e.touches[0].clientY;
     swipeUsed = false;
-    swipeInRail = !!(cardsEl && cardsEl.contains(e.target) && cardsEl.style.pointerEvents === 'auto');
+    swipeInRail = false;
   }, { passive: true });
   window.addEventListener('touchmove', e => {
     if (swipeY === null) return;
     const dy = e.touches[0].clientY - swipeY;
-    if (swipeInRail) {
-      // let the rail scroll natively while it has room in this direction
-      const canDown = cardsEl.scrollTop < cardsEl.scrollHeight - cardsEl.clientHeight - 1;
-      const canUp = cardsEl.scrollTop > 0;
-      if ((dy < 0 && canDown) || (dy > 0 && canUp)) return;
-    }
     e.preventDefault(); // nothing else may move
     if (swipeUsed || gliding || !pageReady()) return;
     if (Math.abs(dy) > 55) {
@@ -1332,7 +1287,7 @@
     const act = easeInOut(clamp01((p - 0.56) / 0.44));
     const wPx = media.clientWidth, hPx = media.clientHeight, aspect = wPx / hPx;
     const robotOn = framesLoaded === N_FRAMES && p > 0.19;
-    const ck = cardsEl ? clamp01((p - 0.88) / 0.1) : 0;
+    const ck = notionEl ? clamp01((p - 0.88) / 0.1) : 0;
     const gy = -2.6 + 3.1 * rise - 0.5 * act + (reduced ? 0 : Math.sin(t / 1600) * 0.03 * rise);
     // land just right of the left-half center (~30% of window width) on any
     // aspect: frustum half-width at the robot's depth, times NDC -0.4
@@ -1420,12 +1375,11 @@
     ctxTop.setTransform(1, 0, 0, 1, 0, 0);
     ctxTop.clearRect(0, 0, canvasTop.width, canvasTop.height);
     if (robotOn) ctxTop.drawImage(canvas, 0, 0);
-    // stage-3 card rail rises in as the robot settles into its final pose
-    if (cardsEl) {
-      // no fade: the rail slides up from fully below the window
-      cardsEl.style.opacity = 1;
-      cardsEl.style.transform = `translateY(${(1 - ck) * 105}%)`;
-      cardsEl.style.pointerEvents = ck > 0.8 ? 'auto' : 'none';
+    // stage-3 Notion tab pulls up in the middle as the robot settles
+    if (notionEl) {
+      if (ck > 0 && notionFrame && !notionFrame.src) notionFrame.src = NOTION_URL;
+      notionEl.style.transform = `translate(-50%, ${(1 - ck) * 120}%)`;
+      notionEl.style.pointerEvents = ck > 0.8 ? 'auto' : 'none';
     }
     // flag for the dither, which samples this canvas's alpha as its mask
     window.heroFx = robotOn ? { on: true } : null;
