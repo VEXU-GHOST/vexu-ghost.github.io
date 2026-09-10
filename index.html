@@ -928,7 +928,9 @@
     gl.uniform1f(uGrid, Math.max(2, Math.round(cssCell * (dbw / Math.max(1, media.clientWidth)))));
     gl.uniform1f(gl.getUniformLocation(prog, 'boost'), portrait ? 1.3 : 1.0);
     gl.uniform1f(uOpacity, portrait ? 0.8 : 0.6); // stronger dots on phones
-    gl.uniform1f(gl.getUniformLocation(prog, 'cap'), media.clientWidth < 700 ? 0.7 : 0.32);
+    // density scales smoothly with window width: 0.7 at <=500px, 0.32 at >=1200px
+    const capT = Math.min(1, Math.max(0, (media.clientWidth - 500) / 700));
+    gl.uniform1f(gl.getUniformLocation(prog, 'cap'), 0.7 + (0.32 - 0.7) * capT);
   }
 
   const tryPlay = () => video.play().then(() => videoUp()).catch(() => {});
