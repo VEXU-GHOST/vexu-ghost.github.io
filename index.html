@@ -149,7 +149,8 @@
      hidden until the robot arrives */
   .hero-media.intro .hero-brand {
     left: 50%; top: 50%;
-    transform: translate(-50%, -50%) scale(2.6);
+    /* --intro-scale is set by JS: shrinks fluidly on smaller screens */
+    transform: translate(-50%, -50%) scale(var(--intro-scale, 2.6));
   }
   .hero-marks { transition: opacity 0.4s ease; }
   .hero-media.intro .hero-marks { opacity: 0; }
@@ -171,7 +172,7 @@
   }
   .stage-copy {
     position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%);
-    width: min(440px, 70%); z-index: 2; text-align: left;
+    width: min(380px, 60%); z-index: 2; text-align: left;
     font-family: "Inter", sans-serif; font-size: 22px; font-weight: 700;
     line-height: 1.35; color: #fff; pointer-events: none;
     will-change: transform;
@@ -522,15 +523,14 @@
     .hero { padding-top: 0; }
     .hero-marks { top: 14px; right: 14px; gap: 10px; }
     .hero-brand { top: 14px; left: 14px; gap: 6px; }
-    .hero-media.intro .hero-brand {
-      transform: translate(-50%, -50%) scale(1.9);
-    }
     .hero-ghost { height: 15px; }
     .hero-word { font-size: 16px; }
-    .hero-tag { font-size: 6px; }
+    /* tagline shrinks by the word's factor (16/64): font 10→2.5, offset 8→2 */
+    .hero-tag { font-size: 2.5px; top: calc(100% + 2px); }
     .stage-cards { left: 6%; right: 6%; width: auto; }
-    .hero-marks img { height: 13px; }
-    .hero-marks img.vex { height: 11px; }
+    .stage-copy { width: 88%; font-size: 25px; }
+    .hero-marks img { height: 22px; }
+    .hero-marks img.vex { height: 19px; }
     section { padding: 80px 0 0; }
     section#nominees { padding-top: 30px; }
     #nominees .grid-2 { margin-top: 40px; }
@@ -1081,7 +1081,7 @@
       compS = S;
       // text scales font AND width together -> identical line wrapping
       copyEl.style.fontSize = (21 * S) + 'px';
-      copyEl.style.width = Math.round(520 * S) + 'px';
+      copyEl.style.width = Math.round(400 * S) + 'px';
       copyEl.style.maxWidth = '86%';
       buildLines();
     }
@@ -1089,7 +1089,35 @@
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
     if (canvasTop.width !== W || canvasTop.height !== H) { canvasTop.width = W; canvasTop.height = H; }
   }
-  window.addEventListener('resize', resize); resize();
+  // splash lockup (and its tagline, which scales with it) fits the screen:
+  // up to 2.6x on desktop, shrinking fluidly on smaller windows
+  const brandEl = document.querySelector('.hero-brand');
+  let lastScaleT = -1e9;
+  function setIntroScale() {
+    if (!brandEl || !brandEl.offsetWidth) return;
+    // cap the rendered width (desktop's 2.6x ≈ 990px), not the multiplier —
+    // otherwise mobile's smaller base sizes get double-shrunk. The tagline
+    // is wider than the lockup, so it constrains the scale too.
+    const tagEl2 = brandEl.querySelector('.hero-tag');
+    let s = Math.min(media.clientWidth * 0.88, 990) / brandEl.offsetWidth;
+    if (tagEl2) {
+      // measure the tagline's TRUE base width on a hidden clone outside the
+      // scaled group (offsetWidth under-reports; live rects include the
+      // transform and its transition transients)
+      const c = tagEl2.cloneNode(true);
+      c.style.transition = 'none'; c.style.transform = 'none'; c.style.visibility = 'hidden';
+      media.appendChild(c);
+      const tagBase = c.getBoundingClientRect().width;
+      c.remove();
+      if (tagBase) s = Math.min(s, (media.clientWidth * 0.9) / tagBase);
+    }
+    s = Math.max(1.1, s);
+    brandEl.style.setProperty('--intro-scale', s.toFixed(3));
+  }
+  window.addEventListener('resize', () => { resize(); setIntroScale(); });
+  resize(); setIntroScale();
+  // re-measure once webfonts land — fallback-font metrics undershoot badly
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(setIntroScale);
 
   // ghost.ai-style paged captive scroll: wheel input is taken over entirely —
   // one gesture moves exactly one stage, animated by script, so native
@@ -1195,26 +1223,53 @@
     if (next !== curIdx) glideTo(next, e.timeStamp);
   });
 
-  // touch: native scrolling, then one-stage snap when the fingers settle
+  // touch: native scrolling, then one-stage snap when scrolling settles
+  const coarseInput = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   let touchLive = 0, touchTimer = null;
   window.addEventListener('touchstart', () => {
     touchLive = performance.now();
     if (glideRaf) { cancelAnimationFrame(glideRaf); glideRaf = null; }
   }, { passive: true });
   window.addEventListener('touchmove', () => { touchLive = performance.now(); }, { passive: true });
+  function snapTouch() {
+    if (glideRaf) return;
+    if (!pageReady()) { glideTo(0, performance.now()); return; }
+    const captive = zone.offsetHeight - media.offsetHeight;
+    const p = Math.min(1, Math.max(0, (window.scrollY - (docTop(zone) - 10)) / captive));
+    const delta = p - STAGES[curIdx];
+    if (Math.abs(delta) < 0.015) { glideTo(curIdx, performance.now()); return; }
+    glideTo(Math.min(STAGES.length - 1, Math.max(0, curIdx + (delta > 0 ? 1 : -1))), performance.now());
+  }
   window.addEventListener('scroll', () => {
     if (glideRaf) return;
-    if (performance.now() - touchLive > 2000) return; // not touch-driven: leave free
+    // touch devices ALWAYS snap on idle — iOS momentum outlives any
+    // touchmove-based timer, which used to strand the page between stages.
+    // Fine-pointer devices keep the guard so scrollbar drags stay free.
+    if (!coarseInput && performance.now() - touchLive > 2000) return;
     clearTimeout(touchTimer);
-    touchTimer = setTimeout(() => {
-      if (!pageReady()) { glideTo(0, performance.now()); return; }
-      const captive = zone.offsetHeight - media.offsetHeight;
-      const p = Math.min(1, Math.max(0, (window.scrollY - (docTop(zone) - 10)) / captive));
-      const delta = p - STAGES[curIdx];
-      if (Math.abs(delta) < 0.015) { glideTo(curIdx, performance.now()); return; }
-      glideTo(Math.min(STAGES.length - 1, Math.max(0, curIdx + (delta > 0 ? 1 : -1))), performance.now());
-    }, 180);
+    touchTimer = setTimeout(snapTouch, 220);
   }, { passive: true });
+  // authoritative end-of-momentum signal where the browser provides it
+  window.addEventListener('scrollend', () => {
+    if (coarseInput && !glideRaf) { clearTimeout(touchTimer); snapTouch(); }
+  });
+
+  // stage-3 rail escape: the rail covers most of a phone screen and contains
+  // its scrolling, so a downward swipe with the rail already at its top is
+  // the "leave" gesture — page back to the robot stage
+  if (cardsEl) {
+    let railY = null;
+    cardsEl.addEventListener('touchstart', e => { railY = e.touches[0].clientY; }, { passive: true });
+    cardsEl.addEventListener('touchmove', e => {
+      if (railY === null) return;
+      const dy = e.touches[0].clientY - railY;
+      if (dy > 46 && cardsEl.scrollTop <= 0 && curIdx === STAGES.length - 1 && !glideRaf) {
+        railY = null;
+        glideTo(STAGES.length - 2, performance.now());
+      }
+    }, { passive: true });
+    cardsEl.addEventListener('touchend', () => { railY = null; }, { passive: true });
+  }
 
   // if the page loads mid-pin (scroll restoration), adopt the nearest stage
   {
@@ -1235,6 +1290,7 @@
     resize();
     const dt = lastT === null ? 0.016 : Math.min((t - lastT) / 1000, 0.05);
     lastT = t;
+    if (t - lastScaleT > 800) { lastScaleT = t; setIntroScale(); }
     const target = reduced ? 1 : progress();
     // returning to intro waits until the robot has fully left the screen
     media.classList.toggle('intro', target < 0.04 && sp < 0.19);
@@ -1258,7 +1314,7 @@
     const gx = -0.4 * (VIEW_HALF * aspect) * act;
     const rotY = -0.6 + act * Math.PI * 2;
     // shrink on portrait/narrow screens so the robot doesn't fill the frame
-    const mob = aspect < 1 ? 0.28 + 0.18 * aspect : 1; // ~50% of former mobile size
+    const mob = aspect < 1 ? 0.75 + 0.3 * aspect : 1; // portrait: ~90% at phone aspect
     const scaleRel = (0.8 + 0.4 * act) * mob / FRAME_SCALE;
     ctx2d.setTransform(dprCap, 0, 0, dprCap, 0, 0);
     ctx2d.clearRect(0, 0, wPx, hPx);
