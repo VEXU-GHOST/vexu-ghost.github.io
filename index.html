@@ -22,6 +22,8 @@
     --r-card: 10px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  /* fully hijacked navigation: the document never scrolls, no scrollbar */
+  html, body { overflow: hidden; height: 100%; overscroll-behavior: none; }
   body {
     font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
     background: var(--bg); color: var(--ink);
@@ -108,7 +110,7 @@
   }
   .hero-shot-outer { padding: 10px 10px 0; }
   .pin-zone { }
-  .pin-spacer { height: 220vh; }
+  .pin-spacer { display: none; }
   .hero-media {
     position: relative; position: sticky; top: 10px;
     height: calc(100vh - 20px);
@@ -522,11 +524,13 @@
     .search { flex: 1; min-width: 0; height: 42px; margin: 0 12px; border-radius: 8px; font-size: 13px; }
     .hero { padding-top: 0; }
     .hero-marks { top: 14px; right: 14px; gap: 10px; }
-    .hero-brand { top: 14px; left: 14px; gap: 6px; }
-    .hero-ghost { height: 15px; }
-    .hero-word { font-size: 16px; }
-    /* tagline shrinks by the word's factor (16/64): font 10→2.5, offset 8→2 */
-    .hero-tag { font-size: 2.5px; top: calc(100% + 2px); }
+    /* keep DESKTOP base sizes so the intro renders at ~1x (sharp raster);
+       the docked corner state scales DOWN instead — 0.25x reproduces the
+       15/16px corner sizing exactly, and downscales stay crisp */
+    .hero-brand { top: 14px; left: 14px; }
+    .hero-media:not(.intro) .hero-brand {
+      transform: translate(-37.5%, -37.5%) scale(0.25);
+    }
     .stage-cards { left: 6%; right: 6%; width: auto; }
     .stage-copy { width: 88%; font-size: 25px; }
     .hero-marks img { height: 22px; }
@@ -724,6 +728,7 @@
     uniform vec2 vres;   // video size
     uniform float grid;  // dither cell size (device px)
     uniform float opacity;
+    uniform float boost;
     uniform vec4 rA;      // brand ellipse: cx, cy, rx, ry (device px, top-origin)
     uniform vec4 rB;      // partner marks ellipse
     uniform vec4 rD;      // stage-copy paragraph ellipse
@@ -776,6 +781,7 @@
       // bright areas keep dither texture instead of going solid white
       lum = pow(lum, 0.62);
       lum = smoothstep(0.17, 0.9, lum);
+      lum = min(1.0, lum * boost); // portrait density compensation
       // posterize to a few density levels so gradients render as clean
       // stepped dither bands instead of smearing continuously
       return floor(lum * 5.0 + 0.5) / 5.0 * 0.32;
@@ -901,7 +907,12 @@
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     gl.viewport(0, 0, w, h);
     gl.uniform2f(uRes, w, h);
-    gl.uniform1f(uGrid, Math.max(2, Math.round(4 * dpr)));
+    // finer cells + boosted density on small/portrait screens, which both
+    // crop most of the frame away and sample far fewer cells
+    const portrait = media.clientWidth < media.clientHeight;
+    const cssCell = media.clientWidth < 700 ? 3 : 4;
+    gl.uniform1f(uGrid, Math.max(2, Math.round(cssCell * dpr)));
+    gl.uniform1f(gl.getUniformLocation(prog, 'boost'), portrait ? 1.45 : 1.0);
   }
 
   video.play().catch(() => {
@@ -1068,9 +1079,7 @@
   function progress() {
     const m = location.hash.match(/^#p=([0-9.]+)$/);
     if (m) return Math.min(1, Math.max(0, parseFloat(m[1])));
-    const captive = zone.offsetHeight - media.offsetHeight;
-    const start = docTop(zone) - 10;
-    return Math.min(1, Math.max(0, (window.scrollY - start) / captive));
+    return STAGES[curIdx];
   }
   let compS = 1; // composition scale vs the 1440x900 reference design
   function resize() {
@@ -1129,22 +1138,15 @@
   const MIN_DELTA = 12;      // minimum wheel delta to count as a fresh gesture
   let curIdx = 0, glideRaf = null;
   let coolUntil = 0, postGlide = false, peakDelta = 0, resetTimer = null;
-  const stageY = i => (docTop(zone) - 10) + STAGES[i] * (zone.offsetHeight - media.offsetHeight);
-
+  let gliding = false, glideTimer = null;
   function glideTo(idx, ts) {
     curIdx = idx;
     coolUntil = ts + COOLDOWN;
     postGlide = true;
-    const from = window.scrollY, to = stageY(idx);
-    const t0 = performance.now(), dur = Math.min(900, 350 + Math.abs(to - from) * 0.4);
-    if (glideRaf) cancelAnimationFrame(glideRaf);
-    const step = now => {
-      const k = Math.min(1, (now - t0) / dur);
-      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-      window.scrollTo(0, from + (to - from) * e);
-      glideRaf = k < 1 ? requestAnimationFrame(step) : null;
-    };
-    glideRaf = requestAnimationFrame(step);
+    gliding = true;
+    if (glideTimer) clearTimeout(glideTimer);
+    // transition length ≈ eased progress distance / chase rate
+    glideTimer = setTimeout(() => { gliding = false; }, 1300);
   }
 
   // does this wheel event begin a NEW gesture, or is it momentum tail?
@@ -1165,10 +1167,9 @@
     if (location.hash.startsWith('#p=') || reduced) return;
     const dir = e.deltaY > 0 ? 1 : e.deltaY < 0 ? -1 : 0;
     if (dir === 0) return;
-    if (dir < 0 && curIdx === 0 && window.scrollY <= 1) return; // page top: native
     e.preventDefault();
     if (!pageReady()) return; // assets still loading: hold on the splash
-    if (glideRaf) return; // mid-transition: swallow everything
+    if (gliding) return; // mid-transition: swallow everything
     const scale = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 :
                   e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerHeight : 1;
     // last stage: wheel drives the card rail until its ends are reached
@@ -1191,7 +1192,7 @@
 
   const dockCta = document.querySelector('.dock-cta');
   if (dockCta) dockCta.addEventListener('click', () => {
-    if (pageReady() && !glideRaf && curIdx === 0) glideTo(1, performance.now());
+    if (pageReady() && !gliding && curIdx === 0) glideTo(1, performance.now());
   });
   // lock the tray to the nav buttons' natural width and make the CTA fill
   // exactly that window; the row shifts by buttons+gap in the intro state
@@ -1218,67 +1219,38 @@
     const up = (e.key === 'ArrowUp' || e.key === 'PageUp' || (e.key === ' ' && e.shiftKey));
     if (!down && !up) return;
     e.preventDefault();
-    if (!pageReady() || glideRaf) return;
+    if (!pageReady() || gliding) return;
     const next = Math.min(STAGES.length - 1, Math.max(0, curIdx + (down ? 1 : -1)));
     if (next !== curIdx) glideTo(next, e.timeStamp);
   });
 
-  // touch: native scrolling, then one-stage snap when scrolling settles
-  const coarseInput = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
-  let touchLive = 0, touchTimer = null;
-  window.addEventListener('touchstart', () => {
-    touchLive = performance.now();
-    if (glideRaf) { cancelAnimationFrame(glideRaf); glideRaf = null; }
+  // touch: swipes page between stages; inside the card rail, touches
+  // scroll the rail natively until it hits an end, then page
+  let swipeY = null, swipeUsed = false, swipeInRail = false;
+  window.addEventListener('touchstart', e => {
+    swipeY = e.touches[0].clientY;
+    swipeUsed = false;
+    swipeInRail = !!(cardsEl && cardsEl.contains(e.target) && cardsEl.style.pointerEvents === 'auto');
   }, { passive: true });
-  window.addEventListener('touchmove', () => { touchLive = performance.now(); }, { passive: true });
-  function snapTouch() {
-    if (glideRaf) return;
-    if (!pageReady()) { glideTo(0, performance.now()); return; }
-    const captive = zone.offsetHeight - media.offsetHeight;
-    const p = Math.min(1, Math.max(0, (window.scrollY - (docTop(zone) - 10)) / captive));
-    const delta = p - STAGES[curIdx];
-    if (Math.abs(delta) < 0.015) { glideTo(curIdx, performance.now()); return; }
-    glideTo(Math.min(STAGES.length - 1, Math.max(0, curIdx + (delta > 0 ? 1 : -1))), performance.now());
-  }
-  window.addEventListener('scroll', () => {
-    if (glideRaf) return;
-    // touch devices ALWAYS snap on idle — iOS momentum outlives any
-    // touchmove-based timer, which used to strand the page between stages.
-    // Fine-pointer devices keep the guard so scrollbar drags stay free.
-    if (!coarseInput && performance.now() - touchLive > 2000) return;
-    clearTimeout(touchTimer);
-    touchTimer = setTimeout(snapTouch, 220);
-  }, { passive: true });
-  // authoritative end-of-momentum signal where the browser provides it
-  window.addEventListener('scrollend', () => {
-    if (coarseInput && !glideRaf) { clearTimeout(touchTimer); snapTouch(); }
-  });
+  window.addEventListener('touchmove', e => {
+    if (swipeY === null) return;
+    const dy = e.touches[0].clientY - swipeY;
+    if (swipeInRail) {
+      // let the rail scroll natively while it has room in this direction
+      const canDown = cardsEl.scrollTop < cardsEl.scrollHeight - cardsEl.clientHeight - 1;
+      const canUp = cardsEl.scrollTop > 0;
+      if ((dy < 0 && canDown) || (dy > 0 && canUp)) return;
+    }
+    e.preventDefault(); // nothing else may move
+    if (swipeUsed || gliding || !pageReady()) return;
+    if (Math.abs(dy) > 55) {
+      swipeUsed = true;
+      const next = Math.min(STAGES.length - 1, Math.max(0, curIdx + (dy < 0 ? 1 : -1)));
+      if (next !== curIdx) glideTo(next, performance.now());
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', () => { swipeY = null; swipeInRail = false; }, { passive: true });
 
-  // stage-3 rail escape: the rail covers most of a phone screen and contains
-  // its scrolling, so a downward swipe with the rail already at its top is
-  // the "leave" gesture — page back to the robot stage
-  if (cardsEl) {
-    let railY = null;
-    cardsEl.addEventListener('touchstart', e => { railY = e.touches[0].clientY; }, { passive: true });
-    cardsEl.addEventListener('touchmove', e => {
-      if (railY === null) return;
-      const dy = e.touches[0].clientY - railY;
-      if (dy > 46 && cardsEl.scrollTop <= 0 && curIdx === STAGES.length - 1 && !glideRaf) {
-        railY = null;
-        glideTo(STAGES.length - 2, performance.now());
-      }
-    }, { passive: true });
-    cardsEl.addEventListener('touchend', () => { railY = null; }, { passive: true });
-  }
-
-  // if the page loads mid-pin (scroll restoration), adopt the nearest stage
-  {
-    const captive = zone.offsetHeight - media.offsetHeight;
-    const p0 = Math.min(1, Math.max(0, (window.scrollY - (docTop(zone) - 10)) / captive));
-    STAGES.forEach((s, i) => {
-      if (Math.abs(s - p0) < Math.abs(STAGES[curIdx] - p0)) curIdx = i;
-    });
-  }
 
   // scroll speed limiter, active only inside the captive zone (wheel input)
   const ease = t => 1 - Math.pow(1 - t, 3);
