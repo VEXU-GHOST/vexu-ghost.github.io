@@ -635,7 +635,7 @@
         <div class="hero-shot ph hero-ph"></div>
         <canvas class="dither-canvas"></canvas>
         <canvas class="robot-canvas"></canvas>
-        <video class="dither-src" src="assets/tam-dither.mp4" muted loop playsinline autoplay preload="auto" style="display:none"></video>
+        <video class="dither-src" src="assets/tam-dither.mp4" muted loop playsinline autoplay preload="auto" style="position:absolute;width:2px;height:2px;opacity:0.01;pointer-events:none;left:0;top:0"></video>
       </div>
       <div class="pin-spacer"></div>
       </div>
@@ -773,8 +773,12 @@
       float ca = res.x / res.y, va = vres.x / vres.y;
       uv -= vec2(0.5, 0.62);
       if (ca > va) { uv.y *= va / ca; } else { uv.x *= ca / va; }
+      // portrait cover-crop shows only ~27% of the frame width — zoom out
+      // so more of the scene is visible (out-of-frame areas render empty)
+      if (ca < va) { uv /= 0.7; }
       uv += vec2(0.5, 0.62);
       uv.y -= 0.08; // shift the picture down in the window
+      if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
       vec3 c = texture2D(tex, uv).rgb;
       float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
       // lift midtones, drop the noise floor, and cap highlights so
@@ -915,14 +919,21 @@
     gl.uniform1f(gl.getUniformLocation(prog, 'boost'), portrait ? 1.45 : 1.0);
   }
 
-  video.play().catch(() => {
-    addEventListener('pointerdown', () => video.play(), { once: true });
-  });
+  const tryPlay = () => video.play().then(() => videoUp()).catch(() => {});
+  tryPlay();
+  // autoplay may be blocked (iOS Low Power Mode etc.) — retry on first input
+  addEventListener('pointerdown', tryPlay, { once: true });
+  addEventListener('touchstart', tryPlay, { once: true });
 
-  // fade the dither in once the video can play through without stalling
+  // fade the dither in once the video is able to play — iOS often never
+  // fires canplaythrough for background videos, so accept weaker signals too
   const videoUp = () => { canvas.classList.add('on'); window.videoReady = true; };
-  if (video.readyState >= 4) videoUp();
-  else video.addEventListener('canplaythrough', videoUp, { once: true });
+  if (video.readyState >= 2) videoUp();
+  else {
+    video.addEventListener('canplay', videoUp, { once: true });
+    video.addEventListener('loadeddata', videoUp, { once: true });
+  }
+  video.addEventListener('playing', videoUp);
 
   // flipbook-style update: ~11fps hides the stabilizer warp in the footage
   let lastUpload = -1e9;
