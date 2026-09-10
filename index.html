@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>GHOST</title>
 <meta name="google-site-verification" content="iUmukHeR3Mo3tyCDIofiN7f9HBq3uI6W4SjS23NAM7s"/>
 <link rel="icon" type="image/png" href="assets/ghost-logo.png">
@@ -191,7 +191,7 @@
   /* stage-3 card rail: awwwards-style tiles, internally scrollable */
   .stage-cards {
     position: absolute; top: 0; bottom: 0; right: 16%;
-    padding: 128px 0 128px; /* symmetric: last card rests as far from the bottom as the first does from the top */
+    padding: 128px 0 calc(128px + env(safe-area-inset-bottom, 0px));
     width: min(500px, 46%); z-index: 6; /* above robot, below blur */
     display: flex; flex-direction: column; gap: 26px;
     overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y;
@@ -440,7 +440,7 @@
 
   /* ============ DOCK ============ */
   .dock {
-    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
     z-index: 90;
     background: rgba(0, 0, 0, 0.69);
     border-radius: 16px; padding: 6px;
@@ -581,6 +581,10 @@
     .foot-bottom { font-size: 14px; }
     .foot-bottom .connect { margin-left: 0; flex-wrap: wrap; }
     footer { padding: 80px 0 56px; }
+  }
+  /* short landscape screens (phones rotated): compress the copy */
+  @media (max-height: 520px) {
+    .stage-copy { font-size: 14px; top: 66%; width: min(360px, 55%); }
   }
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; }
@@ -916,7 +920,7 @@
     // finer cells + boosted density on small/portrait screens, which both
     // crop most of the frame away and sample far fewer cells
     const portrait = media.clientWidth < media.clientHeight;
-    const cssCell = 4;
+    const cssCell = media.clientWidth < 700 ? 3 : 4; // finer grid on phones = denser field (crisp at full DPR)
     gl.uniform1f(uGrid, Math.max(2, Math.round(cssCell * dpr)));
     gl.uniform1f(gl.getUniformLocation(prog, 'boost'), portrait ? 1.45 : 1.0);
   }
@@ -957,6 +961,7 @@
 <script type="module">
 
   const media = document.querySelector('.hero-media');
+  const coarseInput = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   const zone = document.querySelector('.pin-zone');
   const canvas = document.querySelector('.robot-canvas');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1072,13 +1077,18 @@
   const VIEW_HALF = Math.tan(35 * Math.PI / 360) * 3.4296; // frustum half-height at robot depth
   const frames = [];
   let framesLoaded = 0;
-  for (let i = 0; i < N_FRAMES; i++) {
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = 'assets/robot-frames/' + String(i).padStart(3, '0') + '.webp';
-    img.onload = () => { framesLoaded++; };
-    frames.push(img);
+  function loadFrames() {
+    if (frames.length) return;
+    for (let i = 0; i < N_FRAMES; i++) {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = 'assets/robot-frames/' + String(i).padStart(3, '0') + '.webp';
+      img.onload = () => { framesLoaded++; };
+      frames.push(img);
+    }
   }
+  // deferred: let the splash (video, fonts) win the bandwidth race first
+  setTimeout(loadFrames, 1500);
   const ctx2d = canvas.getContext('2d');
   const canvasTop = document.querySelector('.robot-canvas-top');
   const ctxTop = canvasTop.getContext('2d');
@@ -1086,7 +1096,7 @@
   // everything must be in before users can advance pages (8s escape hatch
   // so a failed asset can't brick scrolling)
   const bootT = performance.now();
-  const pageReady = () => (framesLoaded === N_FRAMES && window.videoReady) || performance.now() - bootT > 8000;
+  const pageReady = () => window.videoReady === true || performance.now() - bootT > 8000;
 
   function docTop(el) { return el.getBoundingClientRect().top + window.scrollY; }
   function progress() {
@@ -1153,6 +1163,7 @@
   let coolUntil = 0, postGlide = false, peakDelta = 0, resetTimer = null;
   let gliding = false, glideTimer = null;
   function glideTo(idx, ts) {
+    loadFrames();
     curIdx = idx;
     coolUntil = ts + COOLDOWN;
     postGlide = true;
@@ -1204,6 +1215,9 @@
   }, { passive: false });
 
   const dockCta = document.querySelector('.dock-cta');
+  if (dockCta && coarseInput) {
+    dockCta.innerHTML = '<span class="key">swipe up</span> to continue';
+  }
   if (dockCta) dockCta.addEventListener('click', () => {
     if (pageReady() && !gliding && curIdx === 0) glideTo(1, performance.now());
   });
@@ -1213,6 +1227,10 @@
   const trayRow = document.querySelector('.tray-row');
   function sizeDockRow() {
     if (!trayEl || !trayRow || !dockCta) return;
+    if (window.innerWidth <= 1160) {
+      trayEl.style.width = ''; dockCta.style.width = '';
+      return; // compact CTA pill sizes itself
+    }
     const items = Array.from(trayRow.querySelectorAll('.item'));
     if (!items.length) return;
     const itemsW = items.reduce((s, el) => s + el.offsetWidth, 0) + 6 * (items.length - 1);
