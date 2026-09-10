@@ -676,29 +676,31 @@
   el.textContent = PHRASES[0];
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const CHARS = '!<>-_\\/[]{}=+*^?#';
-  let frame = 0, queue = [], raf = null, idx = 0;
+  let queue = [], raf = null, idx = 0, t0 = 0;
   function setText(txt) {
     const old = el.textContent, len = Math.max(old.length, txt.length);
     queue = [];
     for (let i = 0; i < len; i++) {
-      const start = Math.floor(Math.random() * 80);
-      queue.push({ from: old[i] || '', to: txt[i] || '', start, end: start + 40 + Math.floor(Math.random() * 60), char: '' });
+      // times in MS so throttled-rAF devices (iOS low power) still finish
+      const start = Math.random() * 1300;
+      queue.push({ from: old[i] || '', to: txt[i] || '', start, end: start + 650 + Math.random() * 1000, char: '' });
     }
     cancelAnimationFrame(raf);
-    frame = 0;
+    t0 = performance.now();
     update();
   }
   function update() {
+    const tms = performance.now() - t0;
     let out = '', done = 0;
     for (const q of queue) {
-      if (frame >= q.end) { done++; out += q.to; }
-      else if (frame >= q.start) {
-        if (!q.char || Math.random() < 0.12) q.char = CHARS[Math.floor(Math.random() * CHARS.length)];
+      if (tms >= q.end) { done++; out += q.to; }
+      else if (tms >= q.start) {
+        if (!q.char || Math.random() < 0.25) q.char = CHARS[Math.floor(Math.random() * CHARS.length)];
         out += q.char;
       } else out += q.from;
     }
     el.textContent = out;
-    if (done < queue.length) { frame++; raf = requestAnimationFrame(update); }
+    if (done < queue.length) raf = requestAnimationFrame(update);
   }
   (function next(delay) {
     setTimeout(() => {
@@ -905,7 +907,7 @@
     gl.activeTexture(gl.TEXTURE0);
   }
 
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  const dpr = Math.min(window.devicePixelRatio || 1, 3); // full res: capped rasters blur badly on 3x phones
   function resize() {
     const w = Math.round(media.clientWidth * dpr), h = Math.round(media.clientHeight * dpr);
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
@@ -914,7 +916,7 @@
     // finer cells + boosted density on small/portrait screens, which both
     // crop most of the frame away and sample far fewer cells
     const portrait = media.clientWidth < media.clientHeight;
-    const cssCell = media.clientWidth < 700 ? 3 : 4;
+    const cssCell = 4;
     gl.uniform1f(uGrid, Math.max(2, Math.round(cssCell * dpr)));
     gl.uniform1f(gl.getUniformLocation(prog, 'boost'), portrait ? 1.45 : 1.0);
   }
@@ -1094,7 +1096,7 @@
   }
   let compS = 1; // composition scale vs the 1440x900 reference design
   function resize() {
-    dprCap = Math.min(window.devicePixelRatio || 1, 1.5);
+    dprCap = Math.min(window.devicePixelRatio || 1, 3);
     const cw = media.clientWidth, chh = media.clientHeight;
     const S = Math.min(Math.max(Math.min(cw / 1440, chh / 900), 0.55), 1.15);
     if (Math.abs(S - compS) > 0.01) {
