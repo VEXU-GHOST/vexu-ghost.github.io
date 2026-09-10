@@ -723,7 +723,9 @@
   const media = document.querySelector('.hero-media');
   const canvas = document.querySelector('.dither-canvas');
   const video = document.querySelector('.dither-src');
-  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false });
+  // straight (non-premultiplied) alpha: Safari composites premultiplied
+  // WebGL buffers inconsistently, double-applying alpha => faded dots
+  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: false, antialias: false });
   if (!gl) return;
 
   const VS = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }';
@@ -827,7 +829,7 @@
       vec3 col = r * vec3(1.0, 0.1, 0.6) + g * vec3(0.0, 0.9, 0.1) + b * vec3(0.0, 0.0, 0.3);
       col = mix(vec3(1.0), clamp(col, 0.0, 1.0), amt * 0.5);
       float a = pow((r + g + b) / 3.0, 1.5) * opacity;
-      gl_FragColor = vec4(col * a, a); // premultiplied
+      gl_FragColor = vec4(col, a); // straight alpha
     }`;
 
   function shader(type, src) {
