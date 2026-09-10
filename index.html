@@ -794,7 +794,7 @@
       lum = min(1.0, lum * boost); // portrait density compensation
       // posterize to a few density levels so gradients render as clean
       // stepped dither bands instead of smearing continuously
-      return floor(lum * 5.0 + 0.5) / 5.0 * 0.32;
+      return floor(lum * 5.0 + 0.5) / 5.0 * 0.8; // chunky: bright regions merge
     }
     // dither dot mask at an arbitrary (possibly shifted) screen position
     float dotMask(vec2 fc, float zf) {
