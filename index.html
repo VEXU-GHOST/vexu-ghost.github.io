@@ -1265,7 +1265,7 @@
   const easeInOut = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   const clamp01 = v => Math.min(1, Math.max(0, v));
   let sp = 0, lastT = null;
-  const CHASE = 0.55; // max animation sweep per second — slower, more cinematic
+  const CHASE = 0.75; // max animation sweep per second
   function tick(t) {
     resize();
     const dt = lastT === null ? 0.016 : Math.min((t - lastT) / 1000, 0.05);
