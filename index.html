@@ -423,6 +423,7 @@
   /* ============ DOCK ============ */
   .dock {
     position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+    transition: opacity 0.6s ease;
     z-index: 90;
     background: rgba(0, 0, 0, 0.69);
     border-radius: 16px; padding: 6px;
@@ -477,6 +478,9 @@
   }
   body.is-intro .dock a.item { pointer-events: none; }
   body:not(.is-intro) .dock-cta { pointer-events: none; }
+
+  /* boot sequence: dock waits for the robot frames */
+  body.booting .dock { opacity: 0; pointer-events: none; }
 
   /* ============ RESPONSIVE ============ */
   @media (max-width: 1160px) {
@@ -573,7 +577,7 @@
   }
 </style>
 </head>
-<body class="is-intro">
+<body class="is-intro booting">
 
 <div class="top-zone">
   <!-- ================= HERO / SITE OF THE DAY ================= -->
@@ -607,7 +611,7 @@
         <div class="hero-shot ph hero-ph"></div>
         <canvas class="dither-canvas"></canvas>
         <canvas class="robot-canvas"></canvas>
-        <video class="dither-src" src="assets/tam-dither.mp4" muted loop playsinline autoplay preload="auto" style="position:absolute;width:2px;height:2px;opacity:0.01;pointer-events:none;left:0;top:0"></video>
+        <video class="dither-src" muted loop playsinline autoplay preload="none" style="position:absolute;width:2px;height:2px;opacity:0.01;pointer-events:none;left:0;top:0"></video>
       </div>
       <div class="pin-spacer"></div>
       </div>
@@ -902,10 +906,15 @@
   }
 
   const tryPlay = () => video.play().then(() => videoUp()).catch(() => {});
-  tryPlay();
+  // the video is started by the robot module once all frames are decoded —
+  // the robot must be ready before the backdrop comes alive
+  window.startVideo = () => {
+    if (!video.src) { video.src = 'assets/tam-dither.mp4'; video.load(); }
+    tryPlay();
+  };
   // autoplay may be blocked (iOS Low Power Mode etc.) — retry on first input
-  addEventListener('pointerdown', tryPlay, { once: true });
-  addEventListener('touchstart', tryPlay, { once: true });
+  addEventListener('pointerdown', () => { if (video.src) tryPlay(); }, { once: true });
+  addEventListener('touchstart', () => { if (video.src) tryPlay(); }, { once: true });
 
   // fade the dither in once the video is able to play — iOS often never
   // fires canplaythrough for background videos, so accept weaker signals too
@@ -1073,18 +1082,22 @@
   const VIEW_HALF = Math.tan(35 * Math.PI / 360) * 3.4296; // frustum half-height at robot depth
   const frames = [];
   let framesLoaded = 0;
+  function robotReady() {
+    document.body.classList.remove('booting');
+    if (window.startVideo) window.startVideo();
+  }
   function loadFrames() {
     if (frames.length) return;
     for (let i = 0; i < N_FRAMES; i++) {
       const img = new Image();
       img.decoding = 'async';
       img.src = 'assets/robot-frames/' + String(i).padStart(3, '0') + '.webp';
-      img.onload = () => { framesLoaded++; };
+      img.onload = () => { if (++framesLoaded === N_FRAMES) robotReady(); };
       frames.push(img);
     }
   }
-  // deferred: let the splash (video, fonts) win the bandwidth race first
-  setTimeout(loadFrames, 1500);
+  loadFrames(); // robot first: video and dock wait for it
+  setTimeout(robotReady, 8000); // escape hatch if any frame fails
   const ctx2d = canvas.getContext('2d');
   const canvasTop = document.querySelector('.robot-canvas-top');
   const ctxTop = canvasTop.getContext('2d');
@@ -1092,7 +1105,7 @@
   // everything must be in before users can advance pages (8s escape hatch
   // so a failed asset can't brick scrolling)
   const bootT = performance.now();
-  const pageReady = () => window.videoReady === true || performance.now() - bootT > 8000;
+  const pageReady = () => (framesLoaded === N_FRAMES && window.videoReady === true) || performance.now() - bootT > 8000;
 
   function docTop(el) { return el.getBoundingClientRect().top + window.scrollY; }
   function progress() {
@@ -1140,7 +1153,15 @@
       if (tagBase) s = Math.min(s, (media.clientWidth * 0.9) / tagBase);
     }
     s = Math.max(1.1, s);
-    brandEl.style.setProperty('--intro-scale', s.toFixed(3));
+    const next = s.toFixed(3);
+    if (brandEl.style.getPropertyValue('--intro-scale') !== next) {
+      // apply measurement-driven scale changes INSTANTLY — the splash
+      // lockup must sit at its size, never zoom into place
+      brandEl.style.transition = 'none';
+      brandEl.style.setProperty('--intro-scale', next);
+      void brandEl.offsetWidth;
+      requestAnimationFrame(() => { brandEl.style.transition = ''; });
+    }
   }
   window.addEventListener('resize', () => { resize(); setIntroScale(); });
   resize(); setIntroScale();
