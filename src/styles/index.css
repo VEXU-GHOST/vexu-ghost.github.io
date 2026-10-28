@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ghost-void: #09070f;
+  --color-ghost-night: #151126;
+  --color-ghost-violet: #6f5bd3;
+  --color-ghost-orchid: #9b8bf4;
+  --color-ghost-lilac: #d8d1ff;
+  --color-ghost-mist: #f7f5ff;
+  --color-ghost-muted: #aaa4bb;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #09070f;
+}
+
+html { scroll-behavior: smooth; }
+body { min-width: 320px; margin: 0; }
+
+.hero-grid {
+  background:
+    radial-gradient(circle at 80% 45%, rgb(111 91 211 / 0.28), transparent 28rem),
+    radial-gradient(circle at 10% 100%, rgb(61 43 128 / 0.42), transparent 35rem),
+    #09070f;
+}
