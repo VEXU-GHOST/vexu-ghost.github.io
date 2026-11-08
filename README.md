@@ -36,4 +36,4 @@ assets/           Existing GHOST imagery and logos
 docs/             Architecture and contribution documentation
 ```
 
-See [architecture documentation](docs/architecture.md) and [development documentation](docs/development.md).
+See [architecture documentation](docs/architecture.md), [development documentation](docs/development.md), and the [content verification register](docs/content-verification.md) before adding public-facing copy.

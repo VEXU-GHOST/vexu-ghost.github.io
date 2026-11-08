@@ -1,8 +1,7 @@
-import excellenceAward from '../../assets/cards/worlds-excellence.webp'
-import highStakesField from '../../assets/cards/high-stakes-field.webp'
-import robotCloseup from '../../assets/cards/robot-closeup.webp'
-import trophies from '../../assets/cards/trophies.webp'
-import worldsTeam from '../../assets/cards/worlds-team.webp'
+import vexAi2025WorldChampions from '../../assets/awards/vex-ai-world-champions.jpg'
+import vexAi2024ExcellenceAward from '../../assets/awards/vex-ai-2024-world-champions-excellence-award.webp'
+import vexU2025DesignAward from '../../assets/awards/vex-u-2025-design-award.jpg'
+import vexU2026OctoberDesignAward from '../../assets/awards/vex-u-2026-october-design-award.jpg'
 
 export const navigation = [
   { label: 'Home', to: '/' },
@@ -12,17 +11,63 @@ export const navigation = [
   { label: 'Contact', to: '/contact' },
 ]
 
-export const accomplishments = [
-  { title: 'Worlds Excellence', image: excellenceAward, alt: 'GHOST team members with an excellence award at a competition' },
-  { title: 'Worlds team', image: worldsTeam, alt: 'GHOST team members at a Worlds competition' },
-  { title: 'Built to compete', image: robotCloseup, alt: 'Close-up view of a GHOST competition robot' },
-  { title: 'Competition floor', image: highStakesField, alt: 'VEX High Stakes competition field' },
-  { title: 'Team history', image: trophies, alt: 'Trophies earned by the GHOST team' },
+export const confirmedAchievements = [
+  {
+    year: '2026',
+    title: 'VEX U Design Award and Semifinalist',
+    detail: 'October competition',
+    image: vexU2026OctoberDesignAward,
+    alt: 'GHOST team members with the 2026 VEX U Design Award',
+    imageClass: 'object-[center_72%]',
+  },
+  {
+    year: '2025',
+    title: 'VEX AI Robotics Competition World Champion',
+    detail: 'Tournament',
+    image: vexAi2025WorldChampions,
+    alt: 'GHOST team members at the 2025 VEX AI Robotics Competition World Championship',
+  },
+  {
+    year: '2025',
+    title: 'VEX U Robotics Texas Semifinalist & Design Award',
+    image: vexU2025DesignAward,
+    alt: 'GHOST team members with an award at a 2025 VEX U competition field',
+    imageClass: 'object-[20%_center]',
+  },
+  {
+    year: '2024',
+    title: 'VEX AI Robotics Competition World Champion',
+    detail: 'Excellence Award',
+    image: vexAi2024ExcellenceAward,
+    alt: 'GHOST team members with the 2024 VEX AI Robotics Competition Excellence Award',
+  },
+]
+
+export const robotHistory = [
+  { season: '2025–present', robots: ['Baby Jerry'] },
+  { season: 'High Stakes · 2024–2025', robots: ['Omega Jerry'] },
+  { season: 'Over Under · 2023–2024', robots: ['Jerry', 'George'] },
 ]
 
 export const pageDetails = {
-  about: { eyebrow: 'About GHOST', title: 'A team built around learning, iteration, and competition.', description: 'GHOST is UT Austin’s VEX U robotics team. This page will become the team’s durable home for its story, values, systems, and season history.' },
-  resources: { eyebrow: 'Resources', title: 'Knowledge should be easy to find and easy to share.', description: 'The resource library is being organized for future members and the broader VEX U community. Team-approved guides, documentation, and links will live here.' },
-  join: { eyebrow: 'Join us', title: 'Bring your curiosity. Build the next iteration.', description: 'We are shaping this page around the team’s confirmed recruitment process and schedule. Check back here for the next official way to get involved.' },
-  contact: { eyebrow: 'Contact', title: 'Let’s connect with purpose.', description: 'Official contact channels will be added after the team confirms the right inboxes and social links to publish.' },
+  about: {
+    eyebrow: 'About GHOST',
+    title: 'An open, competitive VEX U team.',
+    description: 'GHOST is a VEX U robotics team at UT Austin where members can learn and compete in VEX U.',
+  },
+  resources: {
+    eyebrow: 'Resources',
+    title: 'Public onboarding resources are in development.',
+    description: 'GHOST intends to make onboarding materials publicly available, but there is not yet a public resource library to share.',
+  },
+  join: {
+    eyebrow: 'Join us',
+    title: 'Recruitment details are being verified.',
+    description: 'The team is confirming its current recruitment and contact information before publishing it here.',
+  },
+  contact: {
+    eyebrow: 'Contact',
+    title: 'Official contact channels are pending verification.',
+    description: 'This page will be updated when the team confirms the channels it wants to publish.',
+  },
 }

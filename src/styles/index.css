@@ -19,9 +19,19 @@
 html { scroll-behavior: smooth; }
 body { min-width: 320px; margin: 0; }
 
-.hero-grid {
+.home-page {
+  position: relative;
+  isolation: isolate;
+  background: #09070f;
+}
+
+.home-page::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  content: '';
+  pointer-events: none;
   background:
-    radial-gradient(circle at 80% 45%, rgb(111 91 211 / 0.28), transparent 28rem),
-    radial-gradient(circle at 10% 100%, rgb(61 43 128 / 0.42), transparent 35rem),
-    #09070f;
+    radial-gradient(ellipse 48rem 42rem at 78% 27%, rgb(111 91 211 / 0.29) 0%, rgb(111 91 211 / 0.19) 38%, rgb(111 91 211 / 0.05) 66%, transparent 88%),
+    radial-gradient(ellipse 52rem 52rem at 7% 92%, rgb(61 43 128 / 0.4) 0%, rgb(61 43 128 / 0.24) 42%, rgb(61 43 128 / 0.06) 70%, transparent 91%);
 }
